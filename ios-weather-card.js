@@ -151,7 +151,7 @@ class IOSWeatherCard extends HTMLElement {
 
     _getIcon(standardKey) {
         const iconFile = ICONS[standardKey] || 'CLOUDY.svg';
-        return `<img src="/local/ios-weather-card/weathericons/${iconFile}" style="width:100%;height:100%;" alt="${standardKey}">`;
+        return `<img src="/local/community/ios-weather-card/weathericons/${iconFile}" style="width:100%;height:100%;" alt="${standardKey}">`;
     }
 
     _updateCardContent(displayName, standardKey, temperature, humidity, secondaryVal, unit, forecastData, forecastCount, forecastType, isFetching, showForecast, showCurrent) {
