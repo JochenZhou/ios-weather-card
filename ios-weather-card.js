@@ -18,7 +18,7 @@ class IOSWeatherCard extends HTMLElement {
     static getStubConfig(hass, entities, entitiesFallback) {
         let defaultEntity = "weather.home";
 
-        // 尝试从 HA 传入的实体列表中，寻找第一个以 weather. 开头的实体
+        // 尝试�?HA 传入的实体列表中，寻找第一个以 weather. 开头的实体
         if (entities && entities.length) {
             const found = entities.find(e => e.startsWith("weather."));
             if (found) defaultEntity = found;
@@ -39,7 +39,7 @@ class IOSWeatherCard extends HTMLElement {
         if (!entityId) { this._renderEmpty("请选择实体"); return; }
 
         const stateObj = hass.states[entityId];
-        if (!stateObj) { this._renderEmpty(`未找到实体: ${entityId}`); return; }
+        if (!stateObj) { this._renderEmpty(`未找到实�? ${entityId}`); return; }
 
         const rawState = stateObj.state;
         const skycon = stateObj.attributes.skycon || stateObj.attributes.caiyun_skycon || rawState;
@@ -119,7 +119,7 @@ class IOSWeatherCard extends HTMLElement {
 
     _requestRender() {
         const fcRow = this.shadowRoot.querySelector('.forecast-row');
-        if (fcRow && this._config.show_forecast !== false) fcRow.innerHTML = '<div class="msg-center">加载中...</div>';
+        if (fcRow && this._config.show_forecast !== false) fcRow.innerHTML = '<div class="msg-center">加载�?..</div>';
     }
 
     _render() {
@@ -151,7 +151,7 @@ class IOSWeatherCard extends HTMLElement {
 
     _getIcon(standardKey) {
         const iconFile = ICONS[standardKey] || 'CLOUDY.svg';
-        return `<img src="/local/community/ios-weather-card/weathericons/${iconFile}" style="width:100%;height:100%;" alt="${standardKey}">`;
+        return `<img src="./weathericons/${iconFile}" style="width:100%;height:100%;" alt="${standardKey}">`;
     }
 
     _updateCardContent(displayName, standardKey, temperature, humidity, secondaryVal, unit, forecastData, forecastCount, forecastType, isFetching, showForecast, showCurrent) {
@@ -189,14 +189,14 @@ class IOSWeatherCard extends HTMLElement {
             fcRow.style.display = 'none';
         } else {
             fcRow.style.display = 'flex';
-            // 关键修复：如果 Header 隐藏，则移除预报顶部的边框和间距，使其紧凑
+            // 关键修复：如�?Header 隐藏，则移除预报顶部的边框和间距，使其紧�?
             if (!showCurrent) {
                 fcRow.classList.add('no-border');
             } else {
                 fcRow.classList.remove('no-border');
             }
 
-            if (isFetching) fcRow.innerHTML = '<div class="msg-center">加载中...</div>';
+            if (isFetching) fcRow.innerHTML = '<div class="msg-center">加载�?..</div>';
             else if (!forecastData || !forecastData.length) fcRow.innerHTML = '<div class="msg-center">暂无预报</div>';
             else {
                 fcRow.innerHTML = '';
@@ -339,6 +339,6 @@ window.customCards.push({
     type: "ios-weather-card",
     name: "iOS Weather Card",
     preview: true,
-    description: "仿 iOS 18 风格的天气卡片，支持动态动画。",
+    description: "�?iOS 18 风格的天气卡片，支持动态动画�?,
     documentationURL: "https://github.com/JochenZhou/ios-weather-card"
 });
