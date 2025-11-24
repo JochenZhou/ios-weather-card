@@ -26,6 +26,9 @@ jobs:
       run: |
         mkdir build
         cp ios-weather-card.js build/
+        cp ios-weather-const.js build/
+        cp ios-weather-icons.js build/
+        cp ios-weather-style.js build/
         cp ios-weather-editor.js build/ || true
         cp -r weathericons build/
         cp hacs.json build/
