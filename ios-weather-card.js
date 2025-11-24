@@ -3,7 +3,7 @@ import { CONDITION_MAP, LABEL_MAP, VISUAL_CONFIG } from './ios-weather-const.js'
 import { styles } from './ios-weather-style.js';
 import './ios-weather-editor.js';
 
-console.info("%c iOS 18 Weather Card %c v7.0 Layout Final ", "color: white; background: #007aff; font-weight: 700;", "color: #007aff; background: white; font-weight: 700;");
+console.info("%c iOS 18 Weather Card %c v1.0 ", "color: white; background: #007aff; font-weight: 700;", "color: #007aff; background: white; font-weight: 700;");
 
 class IOSWeatherCard extends HTMLElement {
     constructor() {
