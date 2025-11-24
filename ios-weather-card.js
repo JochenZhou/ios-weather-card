@@ -339,6 +339,6 @@ window.customCards.push({
     type: "ios-weather-card",
     name: "iOS Weather Card",
     preview: true,
-    description: "�?iOS 18 风格的天气卡片，支持动态动画�?,
+    description: "iOS 18 风格的天气卡片，支持动态动画",
     documentationURL: "https://github.com/JochenZhou/ios-weather-card"
 });
