@@ -1,0 +1,29 @@
+name: Build & Release ZIP
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Create ZIP
+      run: |
+        mkdir build
+        cp ios-weather-card.js build/
+        cp ios-weather-editor.js build/ || true
+        cp -r weathericons build/
+        cp hacs.json build/
+        cd build
+        zip -r ../ios-weather-card.zip .
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ios-weather-card.zip
