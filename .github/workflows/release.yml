@@ -1,8 +1,7 @@
 name: Build & Release ZIP
 
-# 🔥 支持两种触发方式：
-# 1) push tag: v1.0.0 之类
-# 2) 手动在 GitHub 发布 Release（Publish Release）
+permissions:
+  contents: write   # 🔥 必须加，否则无法创建 Release
 
 on:
   push:
@@ -19,7 +18,6 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    # 打包文件到 ZIP
     - name: Create ZIP package
       run: |
         mkdir build
@@ -30,7 +28,6 @@ jobs:
         cd build
         zip -r ../ios-weather-card.zip .
 
-    # 上传 ZIP 到当前 Release（tag push & release publish 均支持）
     - name: Upload Release Asset
       uses: softprops/action-gh-release@v1
       with:
