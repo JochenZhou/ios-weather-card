@@ -1,6 +1,7 @@
 {
   "name": "iOS Weather Card",
-  "zip_release": true,
-  "filename": "ios-weather-card.zip",
-  "render_readme": true
+  "content_type": "frontend",
+  "render_readme": true,
+  "filename": "ios-weather-card.js",
+  "zip_release": false
 }
