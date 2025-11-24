@@ -1,9 +1,15 @@
 name: Build & Release ZIP
 
+# 🔥 支持两种触发方式：
+# 1) push tag: v1.0.0 之类
+# 2) 手动在 GitHub 发布 Release（Publish Release）
+
 on:
   push:
     tags:
       - 'v*'
+  release:
+    types: [published]
 
 jobs:
   build:
@@ -11,9 +17,10 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    - name: Create ZIP
+    # 打包文件到 ZIP
+    - name: Create ZIP package
       run: |
         mkdir build
         cp ios-weather-card.js build/
@@ -23,7 +30,10 @@ jobs:
         cd build
         zip -r ../ios-weather-card.zip .
 
-    - name: Create GitHub Release
+    # 上传 ZIP 到当前 Release（tag push & release publish 均支持）
+    - name: Upload Release Asset
       uses: softprops/action-gh-release@v1
       with:
         files: ios-weather-card.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
