@@ -1,6 +1,7 @@
 import { ICONS } from './ios-weather-icons.js';
 import { CONDITION_MAP, LABEL_MAP, VISUAL_CONFIG } from './ios-weather-const.js';
 import { styles } from './ios-weather-style.js';
+import { weatherIcons } from './weatherIcons.js';
 import './ios-weather-editor.js';
 
 console.info("%c iOS 18 Weather Card %c v1.0 ", "color: white; background: #007aff; font-weight: 700;", "color: #007aff; background: white; font-weight: 700;");
@@ -124,10 +125,20 @@ class IOSWeatherCard extends HTMLElement {
 
     _render() {
         if (this.shadowRoot.querySelector('.card')) return;
-        this.shadowRoot.innerHTML = `<style>${styles}</style><ha-card class="card"><div class="canvas-layer"><div class="card-bg" id="bg"></div><canvas id="weather-canvas"></canvas></div><div class="card-content"><div class="header-row" id="header-row"><div class="header-left"><div class="main-info-row"><div class="main-icon" id="main-icon"></div><div class="status-group"><div class="status-text" id="condition-text">--</div><div class="entity-name" id="city-name">--</div></div></div><div class="secondary-text" id="secondary-info"></div></div><div class="header-right"><div class="temp-text" id="temp">--</div><div class="humidity-text" id="humidity-info"></div></div></div><div class="forecast-row" id="forecast-row"></div></div></ha-card>`;
+        this.shadowRoot.innerHTML = `<style>${styles}</style><ha-card class="card" style="cursor:pointer;"><div class="canvas-layer"><div class="card-bg" id="bg"></div><canvas id="weather-canvas"></canvas></div><div class="card-content"><div class="header-row" id="header-row"><div class="header-left"><div class="main-info-row"><div class="main-icon" id="main-icon"></div><div class="status-group"><div class="status-text" id="condition-text">--</div><div class="entity-name" id="city-name">--</div></div></div><div class="secondary-text" id="secondary-info"></div></div><div class="header-right"><div class="temp-text" id="temp">--</div><div class="humidity-text" id="humidity-info"></div></div></div><div class="forecast-row" id="forecast-row"></div></div></ha-card>`;
         const card = this.shadowRoot.querySelector('.card');
+        card.addEventListener('click', (e) => this._handleTap(e));
         this._resizeObserver = new ResizeObserver(() => this._resizeCanvas());
         this._resizeObserver.observe(card);
+    }
+
+    _handleTap(e) {
+        const tapAction = this._config.tap_action || { action: 'more-info' };
+        if (tapAction.action === 'more-info') {
+            const event = new Event('hass-more-info', { bubbles: true, composed: true });
+            event.detail = { entityId: this._config.entity };
+            this.dispatchEvent(event);
+        }
     }
 
     _resizeCanvas() {
@@ -151,7 +162,10 @@ class IOSWeatherCard extends HTMLElement {
 
     _getIcon(standardKey) {
         const iconFile = ICONS[standardKey] || 'CLOUDY.svg';
-        return `<img src="./weathericons/${iconFile}" style="width:100%;height:100%;" alt="${standardKey}">`;
+        const iconKey = iconFile.replace('.svg', '');
+        const svgContent = weatherIcons[iconKey] || weatherIcons['CLOUDY'];
+        const encoded = encodeURIComponent(svgContent).replace(/'/g, '%27').replace(/"/g, '%22');
+        return `<img src="data:image/svg+xml,${encoded}" style="width:100%;height:100%;" alt="${standardKey}">`;
     }
 
     _updateCardContent(displayName, standardKey, temperature, humidity, secondaryVal, unit, forecastData, forecastCount, forecastType, isFetching, showForecast, showCurrent) {
@@ -265,6 +279,31 @@ class IOSWeatherCard extends HTMLElement {
             }
         }
 
+        let stars = [];
+        let moonCanvas = null;
+        if (config.isNight) {
+            const dpr = window.devicePixelRatio || 1;
+            moonCanvas = document.createElement('canvas');
+            moonCanvas.width = 100 * dpr; moonCanvas.height = 100 * dpr;
+            const mCtx = moonCanvas.getContext('2d');
+            mCtx.scale(dpr, dpr);
+
+            mCtx.fillStyle = '#FEFCD7';
+            mCtx.beginPath(); mCtx.arc(50, 50, 30, 0, Math.PI * 2); mCtx.fill();
+
+            mCtx.globalCompositeOperation = 'destination-out';
+            mCtx.beginPath(); mCtx.arc(50 - 10, 50 - 8, 28, 0, Math.PI * 2); mCtx.fill();
+
+            for (let i = 0; i < 30; i++) {
+                stars.push({
+                    x: Math.random() * 500, y: Math.random() * 300,
+                    size: Math.random() * 1.5 + 1,
+                    opacity: Math.random(),
+                    speed: 0.01 + Math.random() * 0.02
+                });
+            }
+        }
+
         const animate = () => {
             const w = this._width || 300; const h = this._height || 150; const dpr = this._dpr || 1;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -273,8 +312,20 @@ class IOSWeatherCard extends HTMLElement {
             if (config.type === 'sunny') {
                 const cx = w - 60; const cy = 60; const time = Date.now() * 0.001;
                 if (config.isNight) {
-                    ctx.fillStyle = '#FEFCD7'; ctx.shadowBlur = 20; ctx.shadowColor = 'rgba(254, 252, 215, 0.5)';
-                    ctx.beginPath(); ctx.arc(cx, cy, 30, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+                    // Draw Stars
+                    stars.forEach(s => {
+                        s.opacity += s.speed;
+                        if (s.opacity > 1 || s.opacity < 0.2) s.speed = -s.speed;
+                        ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`;
+                        ctx.beginPath(); ctx.arc(s.x % w, s.y % h, s.size, 0, Math.PI * 2); ctx.fill();
+                    });
+
+                    // Draw Moon from off-screen canvas
+                    if (moonCanvas) {
+                        ctx.shadowBlur = 20; ctx.shadowColor = 'rgba(254, 252, 215, 0.5)';
+                        ctx.drawImage(moonCanvas, cx - 50, cy - 50, 100, 100);
+                        ctx.shadowBlur = 0;
+                    }
                 } else {
                     const scale = 1 + Math.sin(time) * 0.05;
                     const grad = ctx.createRadialGradient(cx, cy, 20, cx, cy, 120 * scale);
@@ -296,7 +347,7 @@ class IOSWeatherCard extends HTMLElement {
                         grad.addColorStop(0, `rgba(255,255,255, ${0.1 * p.opacity})`); grad.addColorStop(1, 'rgba(255,255,255,0)');
                         ctx.fillStyle = grad; ctx.arc(p.x, p.y, 40 * p.z, 0, Math.PI * 2); ctx.fill();
                     } else {
-                        ctx.strokeStyle = color; ctx.globalAlpha = p.opacity * (config.type === 'fog' ? 0.3 : 0.6);
+                        ctx.strokeStyle = color; ctx.globalAlpha = p.opacity * (config.opacity || (config.type === 'fog' ? 0.3 : 0.6));
                         ctx.lineWidth = (config.type === 'fog') ? 20 : 2; ctx.lineCap = 'round';
                         ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.len * p.z * (config.type === 'fog' ? 4 : 1), p.y);
                         ctx.stroke(); ctx.globalAlpha = 1;

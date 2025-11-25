@@ -31,7 +31,7 @@ export const styles = `
     .header-row { display: flex; justify-content: space-between; align-items: flex-start; }
     .header-left { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
     .main-info-row { display: flex; align-items: center; gap: 12px; }
-    .main-icon { width: 48px; height: 48px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); }
+    .main-icon { width: 48px; height: 48px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); overflow: hidden; }
     .status-group { display: flex; flex-direction: column; }
     .status-text { font-size: 32px; font-weight: 600; line-height: 1.1; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
     .entity-name { font-size: 14px; opacity: 0.9; font-weight: 500; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
@@ -50,7 +50,7 @@ export const styles = `
     }
     .forecast-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
     .fc-day { font-size: 14px; opacity: 0.9; font-weight: 500; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
-    .fc-icon { width: 32px; height: 32px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
+    .fc-icon { width: 32px; height: 32px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); overflow: hidden; }
     .fc-temp-group { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
     .fc-high { font-size: 16px; font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
     .fc-low { font-size: 13px; opacity: 0.8; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }

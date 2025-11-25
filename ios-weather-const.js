@@ -50,7 +50,7 @@ export const VISUAL_CONFIG = {
     'heavy_snow': { type: 'snow', count: 100, speedY: 3, speedX: 1.5, gradient: 'snow' },
     'storm_snow': { type: 'snow', count: 150, speedY: 4, speedX: 2, gradient: 'storm_snow' },
 
-    'dust': { type: 'fog', density: 40, color: '#E0C090', gradient: 'dust' },
+    'dust': { type: 'fog', density: 40, color: '#E0C090', gradient: 'dust', opacity: 0.15 },
     'sand': { type: 'fog', density: 80, color: '#D2B48C', gradient: 'sand' },
 
     'lightning-rainy': { type: 'rain', count: 100, speed: 18, lightning: true, gradient: 'storm' },
