@@ -47,8 +47,7 @@ show_current: true    # 可选，是否显示当前天气，默认 true
 show_forecast: true   # 可选，是否显示预报，默认 true
 forecast_rows: 5      # 可选，预报显示行数，默认 5
 forecast_type: daily  # 可选，预报类型 'daily' (按天) 或 'hourly' (按小时)，默认 'daily'
-secondary_info_attribute: humidity # 可选，副标题显示的属性（如湿度）
-secondary_info_unit: '%' # 可选，副标题单位
+secondary_info_attribute: forecast_hourly
 ```
 
 ## 📂 文件结构
