@@ -1,5 +1,5 @@
 import { ICONS } from './ios-weather-icons.js';
-import { CONDITION_MAP, LABEL_MAP, VISUAL_CONFIG } from './ios-weather-const.js';
+import { CONDITION_MAP, LABEL_MAP, VISUAL_CONFIG, QWEATHER_ICON_MAP } from './ios-weather-const.js';
 import { styles } from './ios-weather-style.js';
 import { weatherIcons } from './weatherIcons.js';
 import './ios-weather-editor.js';
@@ -19,7 +19,7 @@ class IOSWeatherCard extends HTMLElement {
     static getStubConfig(hass, entities, entitiesFallback) {
         let defaultEntity = "weather.home";
 
-        // 尝试�?HA 传入的实体列表中，寻找第一个以 weather. 开头的实体
+        // 尝试?HA 传入的实体列表中，寻找第一个以 weather. 开头的实体
         if (entities && entities.length) {
             const found = entities.find(e => e.startsWith("weather."));
             if (found) defaultEntity = found;
@@ -40,20 +40,38 @@ class IOSWeatherCard extends HTMLElement {
         if (!entityId) { this._renderEmpty("请选择实体"); return; }
 
         const stateObj = hass.states[entityId];
-        if (!stateObj) { this._renderEmpty(`未找到实�? ${entityId}`); return; }
+        if (!stateObj) { this._renderEmpty(`未找到实? ${entityId}`); return; }
 
         const rawState = stateObj.state;
-        const skycon = stateObj.attributes.skycon || stateObj.attributes.caiyun_skycon || rawState;
+        const skycon = stateObj.attributes.skycon || stateObj.attributes.caiyun_skycon;
+        const conditionCn = stateObj.attributes.condition_cn;
+        const qweatherIcon = stateObj.attributes.qweather_icon;
 
         let standardKey = 'cloudy';
-        if (CONDITION_MAP[skycon]) standardKey = CONDITION_MAP[skycon];
-        else {
-            const lower = String(skycon).toLowerCase();
-            if (CONDITION_MAP[lower]) standardKey = CONDITION_MAP[lower];
-            else {
-                const upper = String(skycon).toUpperCase();
-                if (CONDITION_MAP[upper]) standardKey = CONDITION_MAP[upper];
+        let displayLabel = null;
+
+        // 1. HeFeng Weather (QWeather) Detection
+        if (conditionCn && qweatherIcon) {
+            displayLabel = conditionCn;
+            if (QWEATHER_ICON_MAP[qweatherIcon]) {
+                standardKey = QWEATHER_ICON_MAP[qweatherIcon];
             }
+        }
+        // 2. Caiyun Weather Detection
+        else if (skycon) {
+            if (CONDITION_MAP[skycon]) standardKey = CONDITION_MAP[skycon];
+            else {
+                const lower = String(skycon).toLowerCase();
+                if (CONDITION_MAP[lower]) standardKey = CONDITION_MAP[lower];
+                else {
+                    const upper = String(skycon).toUpperCase();
+                    if (CONDITION_MAP[upper]) standardKey = CONDITION_MAP[upper];
+                }
+            }
+        }
+        // 3. Standard HA Weather
+        else {
+            if (CONDITION_MAP[rawState]) standardKey = CONDITION_MAP[rawState];
         }
 
         let temperature = stateObj.attributes.temperature;
@@ -82,7 +100,7 @@ class IOSWeatherCard extends HTMLElement {
         const forecastCount = config.forecast_rows || 5;
         const displayName = config.name || stateObj.attributes.friendly_name || 'Weather';
 
-        this._updateCardContent(displayName, standardKey, temperature, humidity, secondaryValue, unit, this._forecastData, forecastCount, mode, this._isFetchingForecast, showForecast, showCurrent);
+        this._updateCardContent(displayName, standardKey, temperature, humidity, secondaryValue, unit, this._forecastData, forecastCount, mode, this._isFetchingForecast, showForecast, showCurrent, displayLabel);
 
         if (this._currentVisualKey !== standardKey) {
             this._currentVisualKey = standardKey;
@@ -168,7 +186,7 @@ class IOSWeatherCard extends HTMLElement {
         return `<img src="data:image/svg+xml,${encoded}" style="width:100%;height:100%;" alt="${standardKey}">`;
     }
 
-    _updateCardContent(displayName, standardKey, temperature, humidity, secondaryVal, unit, forecastData, forecastCount, forecastType, isFetching, showForecast, showCurrent) {
+    _updateCardContent(displayName, standardKey, temperature, humidity, secondaryVal, unit, forecastData, forecastCount, forecastType, isFetching, showForecast, showCurrent, customLabel) {
         const headerRow = this.shadowRoot.getElementById('header-row');
         const fcRow = this.shadowRoot.getElementById('forecast-row');
 
@@ -185,7 +203,7 @@ class IOSWeatherCard extends HTMLElement {
             const tempEl = this.shadowRoot.getElementById('temp');
             const humEl = this.shadowRoot.getElementById('humidity-info');
 
-            const label = LABEL_MAP[standardKey] || standardKey;
+            const label = customLabel || LABEL_MAP[standardKey] || standardKey;
             condEl.textContent = label;
             cityEl.textContent = displayName;
             mainIconEl.innerHTML = this._getIcon(standardKey);
