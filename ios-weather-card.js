@@ -4,7 +4,7 @@ import { styles } from './ios-weather-style.js';
 import { weatherIcons } from './weatherIcons.js';
 import './ios-weather-editor.js';
 
-console.info("%c iOS 18 Weather Card %c v1.0 ", "color: white; background: #007aff; font-weight: 700;", "color: #007aff; background: white; font-weight: 700;");
+console.info("%c iOS 18 Weather Card %c v1.1 ", "color: white; background: #007aff; font-weight: 700;", "color: #007aff; background: white; font-weight: 700;");
 
 class IOSWeatherCard extends HTMLElement {
     constructor() {
@@ -87,13 +87,12 @@ class IOSWeatherCard extends HTMLElement {
         const mode = config.forecast_type || 'daily';
 
         if (showForecast) {
-            let foundData = false;
-            if (mode === 'hourly' && stateObj.attributes.hourly_forecast) { this._forecastData = stateObj.attributes.hourly_forecast; foundData = true; }
-            else if (stateObj.attributes.daily_forecast) { this._forecastData = stateObj.attributes.daily_forecast; foundData = true; }
-            if (!foundData && stateObj.attributes.forecast) { this._forecastData = stateObj.attributes.forecast; foundData = true; }
-            if (!foundData) {
+            if (showForecast) {
                 const now = Date.now();
-                if ((this._forecastData.length === 0 || now - this._lastFetch > 300000) && !this._isFetchingForecast) { this._fetchForecast(hass, entityId, mode); }
+                // Always try to fetch if data is empty or stale (5 minutes cache)
+                if ((this._forecastData.length === 0 || now - this._lastFetch > 300000) && !this._isFetchingForecast) {
+                    this._fetchForecast(hass, entityId, mode);
+                }
             }
         }
 
@@ -112,18 +111,65 @@ class IOSWeatherCard extends HTMLElement {
         this._isFetchingForecast = true;
         this._lastFetch = Date.now();
         this._requestRender();
+
         try {
             let data = await this._callService(hass, entityId, type);
-            if (!data.length && type === 'daily') data = await this._callService(hass, entityId, 'hourly');
-            if (data.length) { this._forecastData = data; this.hass = hass; }
-        } catch (e) { console.error("iOS Card Error:", e); } finally { this._isFetchingForecast = false; }
+            if (!data.length && type === 'daily') {
+
+                data = await this._callService(hass, entityId, 'hourly');
+            }
+
+
+
+            if (data.length) {
+                this._forecastData = data;
+            }
+        } catch (e) {
+            console.error("iOS Card Error:", e);
+        } finally {
+            this._isFetchingForecast = false;
+            this.hass = hass; // Trigger update after flag is reset
+        }
     }
 
     async _callService(hass, entityId, type) {
+        const call = async (service) => {
+            return hass.connection.sendMessagePromise({
+                type: 'call_service',
+                domain: 'weather',
+                service: service,
+                service_data: { entity_id: entityId, type: type },
+                return_response: true
+            });
+        };
+
         try {
-            const res = await hass.connection.sendMessagePromise({ type: 'call_service', domain: 'weather', service: 'get_forecasts', service_data: { entity_id: entityId, type: type }, return_response: true });
-            return res?.[entityId]?.forecast || [];
-        } catch (e) { return []; }
+            // 1. Try modern get_forecasts (plural) with timeout
+            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000));
+            const res = await Promise.race([call('get_forecasts'), timeout]);
+
+
+            // Handle response structure (sometimes nested in .response)
+            if (res?.response?.[entityId]?.forecast) return res.response[entityId].forecast;
+            if (res?.[entityId]?.forecast) return res[entityId].forecast;
+
+            return [];
+        } catch (e) {
+            console.warn("[iOS Weather] get_forecasts failed, trying get_forecast...", e);
+            try {
+                // 2. Fallback to legacy get_forecast (singular)
+                const res = await call('get_forecast');
+
+
+                if (res?.response?.forecast) return res.response.forecast;
+                if (res?.forecast) return res.forecast;
+
+                return [];
+            } catch (e2) {
+                console.error("[iOS Weather] Forecast fetch failed:", e2);
+                return [];
+            }
+        }
     }
 
     setConfig(config) { if (!config) return; this._config = config; try { this._render(); } catch (e) { } }
@@ -138,7 +184,7 @@ class IOSWeatherCard extends HTMLElement {
 
     _requestRender() {
         const fcRow = this.shadowRoot.querySelector('.forecast-row');
-        if (fcRow && this._config.show_forecast !== false) fcRow.innerHTML = '<div class="msg-center">加载�?..</div>';
+        if (fcRow && this._config.show_forecast !== false) fcRow.innerHTML = '<div class="msg-center">加载中..</div>';
     }
 
     _render() {
@@ -228,7 +274,7 @@ class IOSWeatherCard extends HTMLElement {
                 fcRow.classList.remove('no-border');
             }
 
-            if (isFetching) fcRow.innerHTML = '<div class="msg-center">加载�?..</div>';
+            if (isFetching) fcRow.innerHTML = '<div class="msg-center">加载中..</div>';
             else if (!forecastData || !forecastData.length) fcRow.innerHTML = '<div class="msg-center">暂无预报</div>';
             else {
                 fcRow.innerHTML = '';
@@ -494,6 +540,7 @@ class IOSWeatherCard extends HTMLElement {
         animate();
     }
 }
+
 customElements.define('ios-weather-card', IOSWeatherCard);
 
 window.customCards = window.customCards || [];
