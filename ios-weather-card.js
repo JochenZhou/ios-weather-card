@@ -250,7 +250,7 @@ class IOSWeatherCard extends HTMLElement {
                 case 'storm': css = 'linear-gradient(160deg, #232526 0%, #414345 100%)'; break;
                 case 'snow': css = 'linear-gradient(160deg, #83a4d4 0%, #b6fbff 100%)'; break;
                 case 'storm_snow': css = 'linear-gradient(160deg, #4B79A1 0%, #283E51 100%)'; break;
-                case 'dust': css = 'linear-gradient(160deg, #CAC531 0%, #F3F9A7 100%)'; break;
+                case 'dust': css = 'linear-gradient(160deg, #635f52 0%, #8a8571 100%)'; break; // Darker dust
                 case 'sand': css = 'linear-gradient(160deg, #B79891 0%, #94716B 100%)'; break;
                 case 'cold': css = 'linear-gradient(160deg, #00416A 0%, #E4E5E6 100%)'; break;
                 default: css = 'linear-gradient(160deg, #2980b9 0%, #6dd5fa 100%)';
@@ -267,14 +267,17 @@ class IOSWeatherCard extends HTMLElement {
         const ctx = canvas.getContext('2d');
         let particles = [];
 
-        if (['rain', 'snow', 'wind', 'fog', 'cloudy'].includes(config.type)) {
+        // Initialize particles based on type
+        if (['rain', 'snow', 'wind', 'fog', 'cloudy', 'hail', 'sleet', 'dust', 'sand'].includes(config.type)) {
             const count = config.density || config.count || 50;
             for (let i = 0; i < count; i++) {
                 particles.push({
                     x: Math.random() * 500, y: Math.random() * 300,
                     z: Math.random() * 0.5 + 0.5,
                     len: Math.random() * 20 + 10, size: Math.random() * 2 + 1,
-                    vx: 0, vy: 0, opacity: Math.random() * 0.5 + 0.2
+                    vx: 0, vy: 0, opacity: Math.random() * 0.5 + 0.2,
+                    // For sleet: 50% chance to be snow
+                    isSnow: config.type === 'sleet' && Math.random() > 0.5
                 });
             }
         }
@@ -309,6 +312,7 @@ class IOSWeatherCard extends HTMLElement {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.save(); ctx.scale(dpr, dpr);
 
+            // Sunny / Night Clear
             if (config.type === 'sunny') {
                 const cx = w - 60; const cy = 60; const time = Date.now() * 0.001;
                 if (config.isNight) {
@@ -335,26 +339,66 @@ class IOSWeatherCard extends HTMLElement {
                 }
             }
 
-            if (['wind', 'fog', 'cloudy'].includes(config.type)) {
+            // Wind / Fog / Cloudy / Dust / Sand (Advanced Volumetric)
+            if (['wind', 'fog', 'cloudy', 'dust', 'sand'].includes(config.type)) {
                 particles.forEach(p => {
+                    // Movement Logic
                     let speed = (config.speed || 5) * p.z;
-                    if (config.type === 'fog') speed *= 0.2; if (config.type === 'cloudy') speed *= 0.1;
-                    p.x += speed; if (p.x > w) p.x = -100;
+
+                    // Specific behaviors
+                    if (config.type === 'fog') {
+                        speed *= 0.1; // Very slow drift
+                        // Add vertical bobbing for fog
+                        p.y += Math.sin(Date.now() * 0.001 + p.x * 0.01) * 0.2;
+                    } else if (config.type === 'dust') {
+                        speed *= 0.15; // Slow drift
+                    } else if (config.type === 'sand') {
+                        speed *= 0.8; // Faster, wind-driven
+                    } else if (config.type === 'cloudy') {
+                        speed *= 0.1;
+                    }
+
+                    p.x += speed;
+                    if (p.x > w + 100) p.x = -100;
+                    if (p.x < -100) p.x = w + 100;
+
+                    // Rendering Logic
                     ctx.beginPath();
-                    const color = config.color || '#FFFFFF';
-                    if (config.type === 'cloudy') {
+
+                    if (['fog', 'dust', 'sand'].includes(config.type)) {
+                        // Soft Volumetric Rendering
+                        const radius = (p.size * 20) * p.z; // Large soft puffs
+                        // Ensure radius is positive
+                        if (radius > 0) {
+                            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius);
+                            const baseColor = config.color || '#FFFFFF';
+
+                            grad.addColorStop(0, baseColor); // Center
+                            grad.addColorStop(1, 'rgba(255,255,255,0)'); // Edge transparent
+
+                            ctx.fillStyle = grad;
+                            ctx.globalAlpha = p.opacity * (config.opacity || 0.3); // Low opacity for layering
+                            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.globalAlpha = 1;
+                        }
+                    } else if (config.type === 'cloudy') {
+                        // Existing cloudy logic
                         const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 40 * p.z);
                         grad.addColorStop(0, `rgba(255,255,255, ${0.1 * p.opacity})`); grad.addColorStop(1, 'rgba(255,255,255,0)');
                         ctx.fillStyle = grad; ctx.arc(p.x, p.y, 40 * p.z, 0, Math.PI * 2); ctx.fill();
                     } else {
-                        ctx.strokeStyle = color; ctx.globalAlpha = p.opacity * (config.opacity || (config.type === 'fog' ? 0.3 : 0.6));
-                        ctx.lineWidth = (config.type === 'fog') ? 20 : 2; ctx.lineCap = 'round';
-                        ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.len * p.z * (config.type === 'fog' ? 4 : 1), p.y);
+                        // Wind (Line based)
+                        ctx.strokeStyle = config.color || '#FFFFFF';
+                        ctx.globalAlpha = p.opacity * 0.6;
+                        ctx.lineWidth = 2; ctx.lineCap = 'round';
+                        ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.len * p.z, p.y);
                         ctx.stroke(); ctx.globalAlpha = 1;
                     }
                 });
             }
 
+            // Rain
             if (config.type === 'rain') {
                 if (config.lightning && Math.random() < 0.005) { ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(0, 0, w, h); }
                 ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1.5;
@@ -364,15 +408,64 @@ class IOSWeatherCard extends HTMLElement {
                 });
             }
 
+            // Snow
             if (config.type === 'snow') {
                 ctx.fillStyle = '#FFFFFF';
+                const time = Date.now() * 0.001;
                 particles.forEach(p => {
-                    p.y += (config.speedY || 2) * p.z; p.x += (config.speedX || 0.5) * p.z;
-                    if (p.y > h) { p.y = -5; p.x = Math.random() * w; } if (p.x > w) { p.x = 0; }
+                    p.y += (config.speedY || 2) * p.z;
+                    // Add sine wave drift
+                    p.x += (config.speedX || 0.5) * p.z + Math.sin(time + p.z * 10) * 0.5;
+
+                    if (p.y > h) { p.y = -5; p.x = Math.random() * w; }
+                    if (p.x > w) { p.x = 0; } else if (p.x < 0) { p.x = w; }
+
                     ctx.globalAlpha = p.opacity; ctx.beginPath();
-                    if ((config.speedX || 0) > 3) { ctx.ellipse(p.x, p.y, p.size * 2, p.size, Math.PI / 6, 0, Math.PI * 2); }
-                    else { ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); }
+                    // Draw circle
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                     ctx.fill();
+                });
+                ctx.globalAlpha = 1;
+            }
+
+            // Hail (Small granules, fast)
+            if (config.type === 'hail') {
+                ctx.fillStyle = '#E0E0E0'; // Slightly gray for ice
+                particles.forEach(p => {
+                    p.y += (config.speed || 20) * p.z; // Fast falling
+                    if (p.y > h) { p.y = -5; p.x = Math.random() * w; }
+
+                    ctx.globalAlpha = p.opacity * 0.8;
+                    ctx.beginPath();
+                    // Small granules
+                    ctx.arc(p.x, p.y, p.size * 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                ctx.globalAlpha = 1;
+            }
+
+            // Sleet (Rain + Snow)
+            if (config.type === 'sleet') {
+                const time = Date.now() * 0.001;
+                particles.forEach(p => {
+                    if (p.isSnow) {
+                        // Snow logic
+                        p.y += (config.speed || 5) * 0.5 * p.z; // Snow falls slower than rain
+                        p.x += Math.sin(time + p.z * 10) * 0.5;
+                        if (p.y > h) { p.y = -5; p.x = Math.random() * w; }
+                        if (p.x > w) { p.x = 0; } else if (p.x < 0) { p.x = w; }
+
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.globalAlpha = p.opacity;
+                        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+                    } else {
+                        // Rain logic
+                        p.y += (config.speed || 12) * p.z;
+                        if (p.y > h) { p.y = -10; p.x = Math.random() * w; }
+
+                        ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1.5;
+                        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y + p.len); ctx.stroke();
+                    }
                 });
                 ctx.globalAlpha = 1;
             }

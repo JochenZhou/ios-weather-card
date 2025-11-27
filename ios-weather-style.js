@@ -48,11 +48,11 @@ export const styles = `
         padding-top: 12px; 
         margin-top: 12px;
     }
-    .forecast-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
-    .fc-day { font-size: 14px; opacity: 0.9; font-weight: 500; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+    .forecast-item { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; flex: 1; }
+    .fc-day { font-size: 14px; opacity: 0.9; font-weight: 500; text-shadow: 0 1px 4px rgba(0,0,0,0.6); text-align: center; }
     .fc-icon { width: 32px; height: 32px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); overflow: hidden; }
     .fc-temp-group { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
-    .fc-high { font-size: 16px; font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
-    .fc-low { font-size: 13px; opacity: 0.8; text-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+    .fc-high { font-size: 16px; font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,0.6); text-align: center; }
+    .fc-low { font-size: 13px; opacity: 0.8; text-shadow: 0 1px 4px rgba(0,0,0,0.6); text-align: center; }
     .msg-center { width: 100%; text-align: center; font-size: 12px; opacity: 0.7; text-shadow: 0 1px 2px rgba(0,0,0,0.5); align-self: center; }
 `;

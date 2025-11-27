@@ -34,11 +34,11 @@ export const VISUAL_CONFIG = {
     'clear-night': { type: 'sunny', isNight: true, gradient: 'night' },
     'partlycloudy': { type: 'cloudy', density: 20, speed: 0.5, gradient: 'cloudy_day' },
     'cloudy': { type: 'cloudy', density: 40, speed: 0.3, gradient: 'gray' },
-    'fog': { type: 'fog', density: 60, color: '#B0C4DE', gradient: 'gray' },
+    'fog': { type: 'fog', density: 25, color: '#B0C4DE', gradient: 'gray' },
 
-    'light_haze': { type: 'fog', density: 30, color: '#B0C4DE', gradient: 'gray' },
-    'moderate_haze': { type: 'fog', density: 60, color: '#B0C4DE', gradient: 'gray' },
-    'heavy_haze': { type: 'fog', density: 90, color: '#90A4AE', gradient: 'gray' },
+    'light_haze': { type: 'fog', density: 20, color: '#B0C4DE', gradient: 'gray' },
+    'moderate_haze': { type: 'fog', density: 25, color: '#B0C4DE', gradient: 'gray' },
+    'heavy_haze': { type: 'fog', density: 30, color: '#90A4AE', gradient: 'gray' },
 
     'light_rain': { type: 'rain', count: 30, speed: 10, gradient: 'rain' },
     'moderate_rain': { type: 'rain', count: 60, speed: 15, gradient: 'rain' },
@@ -50,12 +50,12 @@ export const VISUAL_CONFIG = {
     'heavy_snow': { type: 'snow', count: 100, speedY: 3, speedX: 1.5, gradient: 'snow' },
     'storm_snow': { type: 'snow', count: 150, speedY: 4, speedX: 2, gradient: 'storm_snow' },
 
-    'dust': { type: 'fog', density: 40, color: '#E0C090', gradient: 'dust', opacity: 0.15 },
-    'sand': { type: 'fog', density: 80, color: '#D2B48C', gradient: 'sand' },
+    'dust': { type: 'fog', density: 25, color: '#E0C090', gradient: 'dust', opacity: 0.15 },
+    'sand': { type: 'fog', density: 35, color: '#D2B48C', gradient: 'sand' },
 
     'lightning-rainy': { type: 'rain', count: 100, speed: 18, lightning: true, gradient: 'storm' },
-    'hail': { type: 'rain', count: 50, speed: 25, gradient: 'storm' },
-    'snowy-rainy': { type: 'rain', count: 60, speed: 12, gradient: 'cold' },
+    'hail': { type: 'hail', count: 50, speed: 25, gradient: 'storm' },
+    'snowy-rainy': { type: 'sleet', count: 60, speed: 12, gradient: 'cold' },
     'windy': { type: 'wind', count: 40, speed: 5, color: '#FFFFFF', gradient: 'windy' },
     'alert': { type: 'cloudy', density: 50, speed: 1, gradient: 'gray' },
     'day': { type: 'sunny', gradient: 'day' }
