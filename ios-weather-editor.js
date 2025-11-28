@@ -2,117 +2,170 @@ export class IOSWeatherCardEditor extends HTMLElement {
     constructor() {
         super();
         this.attachShadow({ mode: 'open' });
-        this._domCreated = false;
     }
 
     setConfig(config) {
-        this._config = config;
-        if (!this._domCreated) {
-            this._createDOM();
-        }
-        this._updateUI();
+        this._config = config || {};
+        this._render();
     }
 
     set hass(hass) {
         this._hass = hass;
-        if (this._domCreated) {
-            const picker = this.shadowRoot.getElementById('weather-picker');
-            if (picker && hass) {
-                const entities = Object.keys(hass.states).filter(eid => eid.startsWith('weather.')).sort();
-                picker.innerHTML = '<option value="">请选择实体...</option>';
-                entities.forEach(eid => {
-                    const option = document.createElement('option');
-                    option.value = eid;
-                    option.textContent = hass.states[eid].attributes.friendly_name || eid;
-                    picker.appendChild(option);
-                });
-                if (this._config && this._config.entity) picker.value = this._config.entity;
-            }
-            this.updateAttributesDropdown();
+        this._render();
+    }
+
+    _render() {
+        if (!this._hass || !this._config) return;
+
+        // Create ha-form element
+        let form = this.shadowRoot.querySelector('ha-form');
+        if (!form) {
+            this.shadowRoot.innerHTML = `
+                <style>
+                    ha-form {
+                        display: block;
+                        padding: 0;
+                    }
+                </style>
+                <ha-form></ha-form>
+            `;
+            form = this.shadowRoot.querySelector('ha-form');
+
+            // Listen to value changes from ha-form
+            form.addEventListener('value-changed', (ev) => {
+                this._valueChanged(ev);
+            });
         }
+
+        // Set ha-form properties
+        form.hass = this._hass;
+        form.data = this._config;
+        form.schema = this._getSchema();
+        form.computeLabel = this._computeLabel.bind(this);
     }
 
-    _createDOM() {
-        this.shadowRoot.innerHTML = `
-            <style>
-                .card-config { display: flex; flex-direction: column; gap: 16px; }
-                .row { display: flex; flex-direction: column; gap: 4px; }
-                .label { font-size: 14px; font-weight: 500; color: var(--primary-text-color); }
-                select, input[type="text"], input[type="number"] { width: 100%; padding: 8px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); box-sizing: border-box; }
-                .switch-row { display: flex; align-items: center; justify-content: space-between; }
-                ha-switch { margin-left: auto; }
-            </style>
-            <div class="card-config">
-                <div class="row"><label class="label">实体 (必须)</label><select id="weather-picker"></select></div>
-                <div class="row"><label class="label">名称</label><input type="text" id="name-input" placeholder="留空使用实体名称"></div>
-                <div class="row"><label class="label">次要信息属性</label><select id="attr-select"><option value="">无</option></select></div>
-                <div class="row"><label class="label">次要信息单位</label><input type="text" id="unit-input"></div>
-                <div class="row"><label class="label">预报类型</label><select id="forecast-type"><option value="daily">每日</option><option value="hourly">每小时</option></select></div>
-                <div class="switch-row"><label class="label">显示当前天气</label><ha-switch id="show-current" checked></ha-switch></div>
-                <div class="switch-row"><label class="label">显示预报</label><ha-switch id="show-forecast" checked></ha-switch></div>
-                <div class="row"><label class="label">预报行数</label><input type="number" id="forecast-rows" min="1" max="10" value="5"></div>
-            </div>
-        `;
-        this._domCreated = true;
-        this.shadowRoot.getElementById('weather-picker').addEventListener('change', e => this._valueChanged('entity', e.target.value));
-        this.shadowRoot.getElementById('name-input').addEventListener('input', e => this._valueChanged('name', e.target.value));
-        this.shadowRoot.getElementById('forecast-type').addEventListener('change', e => this._updateConfig({ forecast_type: e.target.value }));
-        this.shadowRoot.getElementById('show-current').addEventListener('change', e => this._updateConfig({ show_current: e.target.checked }));
-        this.shadowRoot.getElementById('show-forecast').addEventListener('change', e => this._updateConfig({ show_forecast: e.target.checked }));
-        this.shadowRoot.getElementById('forecast-rows').addEventListener('input', e => this._valueChanged('forecast_rows', parseInt(e.target.value)));
-        this.shadowRoot.getElementById('attr-select').addEventListener('change', e => this._valueChanged('secondary_info_attribute', e.target.value));
-        this.shadowRoot.getElementById('unit-input').addEventListener('input', e => this._valueChanged('secondary_info_unit', e.target.value));
+    _getSchema() {
+        const schema = [
+            {
+                name: 'entity',
+                required: true,
+                selector: {
+                    entity: {
+                        domain: 'weather'
+                    }
+                }
+            },
+            {
+                name: 'name',
+                selector: {
+                    text: {}
+                }
+            },
+            {
+                name: 'forecast_type',
+                selector: {
+                    select: {
+                        options: [
+                            { value: 'daily', label: '每日' },
+                            { value: 'hourly', label: '每小时' }
+                        ]
+                    }
+                }
+            },
+            {
+                name: 'show_current',
+                selector: {
+                    boolean: {}
+                }
+            },
+            {
+                name: 'show_forecast',
+                selector: {
+                    boolean: {}
+                }
+            },
+            {
+                name: 'forecast_rows',
+                selector: {
+                    number: {
+                        min: 1,
+                        max: 10,
+                        mode: 'box'
+                    }
+                }
+            }
+        ];
+
+        // Dynamically add secondary_info_attribute selector if entity is selected
+        if (this._config.entity && this._hass.states[this._config.entity]) {
+            const stateObj = this._hass.states[this._config.entity];
+            const ignored = ['friendly_name', 'icon', 'supported_features', 'attribution',
+                'custom_ui_more_info', 'forecast', 'daily_forecast', 'hourly_forecast'];
+
+            const attributes = Object.keys(stateObj.attributes)
+                .filter(attr => !ignored.includes(attr))
+                .sort()
+                .map(attr => ({
+                    value: attr,
+                    label: `${attr}: ${stateObj.attributes[attr]}`
+                }));
+
+            if (attributes.length > 0) {
+                schema.push({
+                    name: 'secondary_info_attribute',
+                    selector: {
+                        select: {
+                            options: [
+                                { value: '', label: '无' },
+                                ...attributes
+                            ]
+                        }
+                    }
+                });
+
+                schema.push({
+                    name: 'secondary_info_unit',
+                    selector: {
+                        text: {}
+                    }
+                });
+            }
+        }
+
+        return schema;
     }
 
-    _updateUI() {
-        if (!this._domCreated || !this._config) return;
-        const config = this._config;
-        const picker = this.shadowRoot.getElementById('weather-picker');
-        if (picker && config.entity) picker.value = config.entity;
-        this.shadowRoot.getElementById('name-input').value = config.name || '';
-        this.shadowRoot.getElementById('forecast-type').value = config.forecast_type || 'daily';
-        this.shadowRoot.getElementById('show-current').checked = config.show_current !== false;
-        this.shadowRoot.getElementById('show-forecast').checked = config.show_forecast !== false;
-        this.shadowRoot.getElementById('forecast-rows').value = config.forecast_rows || 5;
-        this.shadowRoot.getElementById('attr-select').value = config.secondary_info_attribute || '';
-        this.shadowRoot.getElementById('unit-input').value = config.secondary_info_unit || '';
+    _computeLabel(schema) {
+        const labels = {
+            'entity': '实体 (必须)',
+            'name': '名称',
+            'forecast_type': '预报类型',
+            'show_current': '显示当前天气',
+            'show_forecast': '显示预报',
+            'forecast_rows': '预报行数',
+            'secondary_info_attribute': '次要信息属性',
+            'secondary_info_unit': '次要信息单位'
+        };
+        return labels[schema.name] || schema.name;
     }
 
-    _valueChanged(key, value) {
-        if (!this._config) return;
-        const newConfig = { ...this._config };
-        if (value === '' || value === undefined) delete newConfig[key]; else newConfig[key] = value;
-        this._fire(newConfig);
-    }
+    _valueChanged(ev) {
+        if (!ev.detail || !ev.detail.value) return;
 
-    _updateConfig(updates) {
-        if (!this._config) return;
-        const newConfig = { ...this._config, ...updates };
-        this._fire(newConfig);
-    }
+        const newConfig = ev.detail.value;
 
-    _fire(newConfig) {
-        const event = new Event("config-changed", { bubbles: true, composed: true });
+        // Fire config-changed event
+        const event = new Event('config-changed', {
+            bubbles: true,
+            composed: true
+        });
         event.detail = { config: newConfig };
         this.dispatchEvent(event);
-    }
 
-    updateAttributesDropdown() {
-        if (!this._hass || !this._config || !this._config.entity) return;
-        const stateObj = this._hass.states[this._config.entity];
-        const select = this.shadowRoot.getElementById('attr-select');
-        if (!stateObj || !select) return;
-        const currentVal = this._config.secondary_info_attribute || '';
-        select.innerHTML = '<option value="">无</option>';
-        const ignored = ['friendly_name', 'icon', 'supported_features', 'attribution', 'custom_ui_more_info', 'forecast', 'daily_forecast', 'hourly_forecast'];
-        Object.keys(stateObj.attributes).sort().forEach(attr => {
-            if (ignored.includes(attr)) return;
-            const option = document.createElement('option');
-            option.value = attr;
-            option.textContent = `${attr}: ${stateObj.attributes[attr]}`;
-            select.appendChild(option);
-        });
-        select.value = currentVal;
+        // Store config and re-render (to update attribute dropdown if entity changed)
+        this._config = newConfig;
+        this._render();
     }
 }
+
 customElements.define("ios-weather-card-editor", IOSWeatherCardEditor);
